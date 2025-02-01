@@ -2,11 +2,10 @@
   "name": "otis-now-playing",
   "version": "1.0.0",
   "description": "Spotify now playing widget",
-  "main": "index.js",
   "dependencies": {
     "node-fetch": "^2.6.1"
   },
-  "scripts": {
-    "build": "echo \"No build required\""
+  "devDependencies": {
+    "@netlify/plugin-functions-install-core": "^1.0.0"
   }
 }
