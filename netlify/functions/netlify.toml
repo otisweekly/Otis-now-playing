@@ -4,3 +4,7 @@ functions = "netlify/functions"
 
 [functions]
 node_bundler = "esbuild"
+external_node_modules = ["node-fetch"]
+
+[[plugins]]
+package = "@netlify/plugin-functions-install-core"
