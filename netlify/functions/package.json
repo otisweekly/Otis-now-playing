@@ -1,10 +1,4 @@
 {
   "name": "otis-now-playing",
-  "version": "1.0.0",
-  "dependencies": {
-    "node-fetch": "^2.6.1"
-  },
-  "devDependencies": {
-    "@netlify/plugin-functions-install-core": "^1.0.0"
-  }
+  "version": "1.0.0"
 }
