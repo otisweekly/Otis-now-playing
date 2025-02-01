@@ -1,5 +1,3 @@
-const fetch = require('node-fetch');
-
 exports.handler = async function(event, context) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -22,7 +20,7 @@ exports.handler = async function(event, context) {
     const tokenData = await tokenResponse.json();
 
     // Get currently playing track
-    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+    const response = await fetch('https://api.spotify.com/v1/users/elliothasse/player/currently-playing', {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`
       }
