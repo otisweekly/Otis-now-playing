@@ -9,17 +9,16 @@ exports.handler = async function(event, context) {
       <html>
         <head>
           <title>Spotify Authorization</title>
+        </head>
+        <body>
           <script>
             if (window.location.hash) {
               const token = new URLSearchParams(window.location.hash.substring(1)).get('access_token');
-              // Store token and redirect back to main site
-              localStorage.setItem('spotify_token', token);
-              window.location.href = 'https://otisweekly.com'; // Replace with your actual domain
+              window.opener.postMessage({ token: token }, '*');
+              window.close();
             }
           </script>
-        </head>
-        <body>
-          <p>Authorizing...</p>
+          <p>Authorization successful! You can close this window.</p>
         </body>
       </html>
     `
