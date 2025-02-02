@@ -7,51 +7,18 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    // Log environment variables (don't log the full secret!)
-    console.log('Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
-    console.log('Client Secret exists:', !!process.env.SPOTIFY_CLIENT_SECRET);
-    
-    const auth = Buffer.from(
-      process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
-    ).toString('base64');
-    console.log('Auth string created');
-
-    // Get token
-    console.log('Requesting token...');
-    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + auth
-      },
-      body: 'grant_type=client_credentials'
-    });
-
-    console.log('Token response status:', tokenResponse.status);
-    const tokenData = await tokenResponse.json();
-    console.log('Token data received');
-
-    // Return debug info
+    console.log('Debug: Starting function');
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ 
-        debug: true,
-        clientIdExists: !!process.env.SPOTIFY_CLIENT_ID,
-        clientSecretExists: !!process.env.SPOTIFY_CLIENT_SECRET,
-        tokenStatus: tokenResponse.status
-      })
+      body: JSON.stringify({ message: 'Test response' })
     };
-
   } catch (error) {
-    console.log('Detailed error:', error);
+    console.log('Error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        error: 'Failed fetching data',
-        details: error.toString()
-      })
+      body: JSON.stringify({ error: error.toString() })
     };
   }
 };
