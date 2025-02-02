@@ -1,29 +1,26 @@
 exports.handler = async function(event, context) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type'
   };
 
-  // If we don't have an authorization token, redirect to Spotify login
-  if (!event.headers.authorization) {
-    const clientId = process.env.SPOTIFY_CLIENT_ID;
-    const scope = 'user-read-currently-playing user-read-playback-state';
-    const redirectUri = 'https://gleeful-tartufo-15a55b.netlify.app/.netlify/functions/callback';
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        needsAuth: true,
-        authUrl: `https://accounts.spotify.com/authorize?response_type=token&client_id=${clientId}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}`
-      })
-    };
-  }
-
   try {
+    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + Buffer.from(
+          process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
+        ).toString('base64')
+      },
+      body: 'grant_type=client_credentials'
+    });
+
+    const tokenData = await tokenResponse.json();
+
     const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
       headers: {
-        'Authorization': event.headers.authorization,
+        'Authorization': 'Bearer ' + tokenData.access_token
       }
     });
 
