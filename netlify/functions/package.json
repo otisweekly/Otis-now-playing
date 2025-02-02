@@ -1,7 +1,6 @@
 {
   "name": "otis-now-playing",
   "version": "1.0.0",
-  "description": "Spotify now playing widget",
   "dependencies": {
     "node-fetch": "^2.6.1"
   }
