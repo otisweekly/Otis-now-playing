@@ -7,7 +7,7 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    console.log('Starting token request');
+    // Get token
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -22,14 +22,16 @@ exports.handler = async function(event, context) {
     const tokenData = await tokenResponse.json();
     console.log('Token response:', tokenData);
 
-    const response = await fetch('https://api.spotify.com/v1/users/elliothasse/player/currently-playing', {
+    // Get currently playing
+    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
       headers: {
-        'Authorization': 'Bearer ' + tokenData.access_token
+        'Authorization': `Bearer ${tokenData.access_token}`
       }
     });
 
-    console.log('Spotify API response status:', response.status);
-    
+    console.log('Spotify response status:', response.status);
+
+    // If nothing is playing
     if (response.status === 204) {
       return {
         statusCode: 200,
@@ -38,29 +40,46 @@ exports.handler = async function(event, context) {
       };
     }
 
-    const data = await response.json();
-    console.log('Spotify API data:', data);
+    // Parse response data
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
     
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.log('Parse error:', e);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ isPlaying: false })
+      };
+    }
+
+    // Check if we have valid data
+    if (!data || !data.item) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ isPlaying: false })
+      };
+    }
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         isPlaying: true,
-        track: data.item?.name,
-        artist: data.item?.artists[0]?.name
+        track: data.item.name || 'Unknown Track',
+        artist: data.item.artists?.[0]?.name || 'Unknown Artist'
       })
     };
   } catch (error) {
-    console.log('Detailed error:', error);
-    console.log('Error stack:', error.stack);
+    console.log('Error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        error: 'Failed fetching data',
-        details: error.message,
-        stack: error.stack
-      })
+      body: JSON.stringify({ error: 'Failed fetching data' })
     };
   }
 };
