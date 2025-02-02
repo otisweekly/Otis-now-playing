@@ -1,10 +1,6 @@
 [build]
-  command = "npm install"
-  publish = "public"
-  functions = "netlify/functions"
-
-[[plugins]]
-  package = "@netlify/plugin-functions-install-core"
+publish = "public"
+functions = "netlify/functions"
 
 [functions]
-  node_bundler = "esbuild"
+node_bundler = "esbuild"
