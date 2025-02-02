@@ -7,61 +7,50 @@ exports.handler = async function(event, context) {
   };
 
   try {
+    // Log environment variables (don't log the full secret!)
+    console.log('Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
+    console.log('Client Secret exists:', !!process.env.SPOTIFY_CLIENT_SECRET);
+    
+    const auth = Buffer.from(
+      process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
+    ).toString('base64');
+    console.log('Auth string created');
+
     // Get token
+    console.log('Requesting token...');
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + Buffer.from(
-          process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
-        ).toString('base64')
+        'Authorization': 'Basic ' + auth
       },
       body: 'grant_type=client_credentials'
     });
 
+    console.log('Token response status:', tokenResponse.status);
     const tokenData = await tokenResponse.json();
-    console.log('Token data:', tokenData);
+    console.log('Token data received');
 
-    // If we don't get a token, return early
-    if (!tokenData.access_token) {
-      console.log('No access token received');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ isPlaying: false, message: 'No token' })
-      };
-    }
-
-    // Get player state
-    const response = await fetch('https://api.spotify.com/v1/me/player', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`
-      }
-    });
-
-    console.log('Response status:', response.status);
-    
-    // Return the raw response for debugging
-    const responseText = await response.text();
-    console.log('Raw response:', responseText);
-
+    // Return debug info
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ 
-        isPlaying: true,
-        debug: responseText
+        debug: true,
+        clientIdExists: !!process.env.SPOTIFY_CLIENT_ID,
+        clientSecretExists: !!process.env.SPOTIFY_CLIENT_SECRET,
+        tokenStatus: tokenResponse.status
       })
     };
 
   } catch (error) {
-    console.log('Error:', error);
+    console.log('Detailed error:', error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: 'Failed fetching data',
-        message: error.message
+        details: error.toString()
       })
     };
   }
