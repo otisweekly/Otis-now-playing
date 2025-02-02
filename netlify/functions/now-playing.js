@@ -5,7 +5,6 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    // First, get a Spotify access token
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -18,55 +17,48 @@ exports.handler = async function(event, context) {
     });
 
     const tokenData = await tokenResponse.json();
-    console.log('Token response:', tokenData);
 
-    // Then try to get currently playing
     const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`
       }
     });
 
-    console.log('Spotify API response status:', response.status);
-    
-    if (response.status === 204) {
+    // Log the full response for debugging
+    console.log('Response status:', response.status);
+    const responseText = await response.text();
+    console.log('Response body:', responseText);
+
+    try {
+      const data = JSON.parse(responseText);
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ isPlaying: false, message: 'No track currently playing' })
+        body: JSON.stringify({
+          isPlaying: true,
+          track: data.item ? data.item.name : 'Unknown Track',
+          artist: data.item && data.item.artists ? data.item.artists[0].name : 'Unknown Artist'
+        })
       };
-    }
-
-    if (response.status === 401) {
+    } catch (e) {
+      console.log('Parse error:', e);
       return {
-        statusCode: 401,
+        statusCode: 200,
         headers,
-        body: JSON.stringify({ 
-          error: 'Unauthorized',
-          auth_url: `https://accounts.spotify.com/authorize?client_id=${process.env.SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent('https://gleeful-tartufo-15a55b.netlify.app/.netlify/functions/callback')}&scope=user-read-currently-playing`
+        body: JSON.stringify({
+          isPlaying: true,
+          debug: responseText
         })
       };
     }
-
-    const data = await response.json();
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        isPlaying: true,
-        track: data.item?.name,
-        artist: data.item?.artists[0]?.name
-      })
-    };
   } catch (error) {
-    console.log('Detailed error:', error);
+    console.log('Error:', error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: 'Failed fetching data',
-        details: error.message
+        details: error.toString()
       })
     };
   }
