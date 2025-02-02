@@ -45,21 +45,35 @@ async function getPlayerState(access_token) {
   }
 
   const data = await response.json();
-  console.log('Player state:', {
-    isActive: data.is_playing,
-    device: data.device?.name,
-    deviceType: data.device?.type,
-    deviceActive: data.device?.is_active,
-    progressMs: data.progress_ms,
-    repeatState: data.repeat_state,
-    shuffleState: data.shuffle_state
+  // Log the full player state for debugging
+  console.log('Full player state:', JSON.stringify(data, null, 2));
+  
+  return data;
+}
+
+async function getCurrentlyPlaying(access_token) {
+  console.log('Fetching currently playing track...');
+  const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+    },
   });
+
+  console.log('Currently playing response status:', response.status);
+  
+  if (response.status === 204 || response.status === 404) {
+    console.log('No track currently playing');
+    return null;
+  }
+
+  const data = await response.json();
+  console.log('Currently playing data:', JSON.stringify(data, null, 2));
   return data;
 }
 
 async function getNowPlaying(access_token) {
-  console.log('Fetching now playing...');
   const playerState = await getPlayerState(access_token);
+  const currentTrack = await getCurrentlyPlaying(access_token);
   
   if (!playerState) {
     return { 
@@ -72,10 +86,9 @@ async function getNowPlaying(access_token) {
     };
   }
 
-  // If nothing is playing, return early with device info
-  if (!playerState.is_playing || !playerState.item) {
+  if (!currentTrack || !currentTrack.item) {
     return {
-      isPlaying: false,
+      isPlaying: playerState.is_playing || false,
       title: 'Nothing playing',
       artist: '',
       album: '',
@@ -87,14 +100,14 @@ async function getNowPlaying(access_token) {
   }
 
   return {
-    isPlaying: true,
-    title: playerState.item.name,
-    artist: playerState.item.artists.map(({ name }) => name).join(', '),
-    album: playerState.item.album?.name,
+    isPlaying: currentTrack.is_playing,
+    title: currentTrack.item.name,
+    artist: currentTrack.item.artists.map(({ name }) => name).join(', '),
+    album: currentTrack.item.album?.name,
     device: playerState.device?.name,
     deviceType: playerState.device?.type,
-    albumArt: playerState.item.album?.images[0]?.url,
-    songUrl: playerState.item.external_urls?.spotify
+    albumArt: currentTrack.item.album?.images[0]?.url,
+    songUrl: currentTrack.item.external_urls?.spotify
   };
 }
 
