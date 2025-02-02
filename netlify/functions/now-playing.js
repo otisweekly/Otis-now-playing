@@ -1,3 +1,5 @@
+const fetch = require('node-fetch');
+
 exports.handler = async function(event, context) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -5,6 +7,7 @@ exports.handler = async function(event, context) {
   };
 
   try {
+    console.log('Starting token request');
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -17,13 +20,16 @@ exports.handler = async function(event, context) {
     });
 
     const tokenData = await tokenResponse.json();
+    console.log('Token response:', tokenData);
 
-    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+    const response = await fetch('https://api.spotify.com/v1/users/elliothasse/player/currently-playing', {
       headers: {
         'Authorization': 'Bearer ' + tokenData.access_token
       }
     });
 
+    console.log('Spotify API response status:', response.status);
+    
     if (response.status === 204) {
       return {
         statusCode: 200,
@@ -33,22 +39,28 @@ exports.handler = async function(event, context) {
     }
 
     const data = await response.json();
+    console.log('Spotify API data:', data);
     
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         isPlaying: true,
-        track: data.item.name,
-        artist: data.item.artists[0].name
+        track: data.item?.name,
+        artist: data.item?.artists[0]?.name
       })
     };
   } catch (error) {
-    console.log('Error:', error);
+    console.log('Detailed error:', error);
+    console.log('Error stack:', error.stack);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed fetching data' })
+      body: JSON.stringify({ 
+        error: 'Failed fetching data',
+        details: error.message,
+        stack: error.stack
+      })
     };
   }
 };
