@@ -30,20 +30,45 @@ async function getNowPlaying(access_token) {
     },
   });
 
-  if (response.status === 204) {
-    return { isPlaying: false };
+  // If no track is playing, return early
+  if (response.status === 204 || response.status === 404) {
+    return { 
+      isPlaying: false,
+      title: 'Nothing playing',
+      artist: '',
+      album: '',
+      albumArt: '',
+      songUrl: ''
+    };
   }
 
-  const data = await response.json();
-  
-  return {
-    isPlaying: data.is_playing,
-    title: data.item.name,
-    artist: data.item.artists.map(({ name }) => name).join(', '),
-    album: data.item.album.name,
-    albumArt: data.item.album.images[0]?.url,
-    songUrl: data.item.external_urls.spotify
-  };
+  try {
+    const data = await response.json();
+    
+    // Check if we have valid data
+    if (!data || !data.item) {
+      return {
+        isPlaying: false,
+        title: 'Nothing playing',
+        artist: '',
+        album: '',
+        albumArt: '',
+        songUrl: ''
+      };
+    }
+    
+    return {
+      isPlaying: data.is_playing,
+      title: data.item.name || 'Unknown track',
+      artist: data.item.artists ? data.item.artists.map(({ name }) => name || 'Unknown artist').join(', ') : 'Unknown artist',
+      album: data.item.album?.name || 'Unknown album',
+      albumArt: data.item.album?.images[0]?.url || '',
+      songUrl: data.item.external_urls?.spotify || ''
+    };
+  } catch (error) {
+    console.error('Error parsing response:', error);
+    throw new Error('Failed to parse Spotify response');
+  }
 }
 
 exports.handler = async function(event, context) {
@@ -63,8 +88,20 @@ exports.handler = async function(event, context) {
       };
     }
 
-    const { access_token } = await getAccessToken();
-    const song = await getNowPlaying(access_token);
+    // Log environment variables (without exposing sensitive data)
+    console.log('Environment check:', {
+      hasClientId: !!CLIENT_ID,
+      hasClientSecret: !!CLIENT_SECRET,
+      hasRefreshToken: !!REFRESH_TOKEN
+    });
+
+    const tokenResponse = await getAccessToken();
+    if (!tokenResponse.access_token) {
+      console.error('Token response:', tokenResponse);
+      throw new Error('Failed to get access token');
+    }
+
+    const song = await getNowPlaying(tokenResponse.access_token);
 
     return {
       statusCode: 200,
@@ -72,13 +109,14 @@ exports.handler = async function(event, context) {
       body: JSON.stringify(song)
     };
   } catch (error) {
-    console.log('Error:', error);
+    console.error('Error details:', error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: 'Unable to fetch now playing data',
-        details: error.message 
+        details: error.message,
+        timestamp: new Date().toISOString()
       })
     };
   }
