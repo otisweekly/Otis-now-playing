@@ -20,66 +20,49 @@ exports.handler = async function(event, context) {
     });
 
     const tokenData = await tokenResponse.json();
-    console.log('Token response:', tokenData);
+    console.log('Token data:', tokenData);
 
-    // Get currently playing
-    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+    // If we don't get a token, return early
+    if (!tokenData.access_token) {
+      console.log('No access token received');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ isPlaying: false, message: 'No token' })
+      };
+    }
+
+    // Get player state
+    const response = await fetch('https://api.spotify.com/v1/me/player', {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`
       }
     });
 
-    console.log('Spotify response status:', response.status);
-
-    // If nothing is playing
-    if (response.status === 204) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ isPlaying: false })
-      };
-    }
-
-    // Parse response data
+    console.log('Response status:', response.status);
+    
+    // Return the raw response for debugging
     const responseText = await response.text();
     console.log('Raw response:', responseText);
-    
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      console.log('Parse error:', e);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ isPlaying: false })
-      };
-    }
-
-    // Check if we have valid data
-    if (!data || !data.item) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ isPlaying: false })
-      };
-    }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
+      body: JSON.stringify({ 
         isPlaying: true,
-        track: data.item.name || 'Unknown Track',
-        artist: data.item.artists?.[0]?.name || 'Unknown Artist'
+        debug: responseText
       })
     };
+
   } catch (error) {
     console.log('Error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed fetching data' })
+      body: JSON.stringify({ 
+        error: 'Failed fetching data',
+        message: error.message
+      })
     };
   }
 };
