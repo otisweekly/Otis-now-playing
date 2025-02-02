@@ -4,43 +4,39 @@ exports.handler = async function(event, context) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
   };
 
+  // If we don't have an authorization token, redirect to Spotify login
+  if (!event.headers.authorization) {
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const scope = 'user-read-currently-playing user-read-playback-state';
+    const redirectUri = 'https://gleeful-tartufo-15a55b.netlify.app/.netlify/functions/callback';
+    
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        needsAuth: true,
+        authUrl: `https://accounts.spotify.com/authorize?response_type=token&client_id=${clientId}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}`
+      })
+    };
+  }
+
   try {
-    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
+    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + Buffer.from(
-          process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
-        ).toString('base64')
-      },
-      body: 'grant_type=client_credentials&scope=user-read-currently-playing'
-    });
-
-    const tokenData = await tokenResponse.json();
-    console.log('Token response:', tokenData); // For debugging
-
-    const response = await fetch('https://api.spotify.com/v1/me/player', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`
+        'Authorization': event.headers.authorization,
       }
     });
 
-    console.log('Player response status:', response.status); // For debugging
-
-    const data = await response.json();
-    console.log('Player response:', data); // For debugging
-
-    if (!data || !data.item) {
+    if (response.status === 204) {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ 
-          isPlaying: true,
-          debug: data // This will help us see what we're getting back
-        })
+        body: JSON.stringify({ isPlaying: false })
       };
     }
 
+    const data = await response.json();
+    
     return {
       statusCode: 200,
       headers,
@@ -51,14 +47,11 @@ exports.handler = async function(event, context) {
       })
     };
   } catch (error) {
-    console.log('Detailed error:', error);
+    console.log('Error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        error: 'Failed fetching data',
-        details: error.message
-      })
+      body: JSON.stringify({ error: 'Failed fetching data' })
     };
   }
 };
