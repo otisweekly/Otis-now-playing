@@ -5,8 +5,8 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    // Get access token using refresh token
-    const refresh = await fetch('https://accounts.spotify.com/api/token', {
+    // Get access token using client credentials
+    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -14,15 +14,15 @@ exports.handler = async function(event, context) {
           process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
         ).toString('base64')
       },
-      body: 'grant_type=refresh_token&refresh_token=' + process.env.SPOTIFY_REFRESH_TOKEN
+      body: 'grant_type=client_credentials'
     });
 
-    const refreshData = await refresh.json();
+    const tokenData = await tokenResponse.json();
 
-    // Get currently playing track
-    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+    // Get currently playing using your user ID
+    const response = await fetch('https://api.spotify.com/v1/users/elliothasse/player/currently-playing', {
       headers: {
-        'Authorization': 'Bearer ' + refreshData.access_token
+        'Authorization': 'Bearer ' + tokenData.access_token
       }
     });
 
