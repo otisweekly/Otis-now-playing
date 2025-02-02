@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 exports.handler = async (event, context) => {
   // Handle the initial authorization request
   if (!event.queryStringParameters.code) {
-    const scope = 'user-read-currently-playing user-read-playback-state';
+    const scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state';
     const redirectUri = 'https://gleeful-tartufo-15a55b.netlify.app/.netlify/functions/auth';
     
     const params = new URLSearchParams({
