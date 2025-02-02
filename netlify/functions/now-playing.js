@@ -5,9 +5,6 @@ exports.handler = async function(event, context) {
   };
 
   try {
-    // Use your Spotify user ID
-    const userId = 'elliothasse'; // Your Spotify user ID
-
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -16,43 +13,52 @@ exports.handler = async function(event, context) {
           process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
         ).toString('base64')
       },
-      body: 'grant_type=client_credentials'
+      body: 'grant_type=client_credentials&scope=user-read-currently-playing'
     });
 
     const tokenData = await tokenResponse.json();
-    
-    // Get user's currently playing track
-    const response = await fetch('https://api.spotify.com/v1/users/' + userId + '/player/currently-playing', {
+    console.log('Token response:', tokenData); // For debugging
+
+    const response = await fetch('https://api.spotify.com/v1/me/player', {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`
       }
     });
 
-    if (response.status === 204) {
+    console.log('Player response status:', response.status); // For debugging
+
+    const data = await response.json();
+    console.log('Player response:', data); // For debugging
+
+    if (!data || !data.item) {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ isPlaying: false })
+        body: JSON.stringify({ 
+          isPlaying: true,
+          debug: data // This will help us see what we're getting back
+        })
       };
     }
 
-    const data = await response.json();
-    
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         isPlaying: true,
-        track: data.item?.name || 'Unknown Track',
-        artist: data.item?.artists[0]?.name || 'Unknown Artist'
+        track: data.item.name,
+        artist: data.item.artists[0].name
       })
     };
   } catch (error) {
-    console.log('Error:', error);
+    console.log('Detailed error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed fetching data' })
+      body: JSON.stringify({ 
+        error: 'Failed fetching data',
+        details: error.message
+      })
     };
   }
 };
