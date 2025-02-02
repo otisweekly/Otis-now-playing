@@ -1,35 +1,35 @@
 exports.handler = async function(event, context) {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type'
-  };
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const redirectUri = 'https://gleeful-tartufo-15a55b.netlify.app/.netlify/functions/callback';
+  const scope = 'user-read-currently-playing user-read-playback-state';
+  
+  const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
+
+  if (!event.headers.authorization) {
+    return {
+      statusCode: 302,
+      headers: {
+        'Location': authUrl,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    };
+  }
 
   try {
-    // Get Spotify access token
-    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
+    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + Buffer.from(
-          process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
-        ).toString('base64')
-      },
-      body: 'grant_type=client_credentials'
-    });
-
-    const tokenData = await tokenResponse.json();
-
-    // Get currently playing track
-    const response = await fetch('https://api.spotify.com/v1/users/elliothasse/player/currently-playing', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`
+        'Authorization': event.headers.authorization
       }
     });
 
     if (response.status === 204) {
       return {
         statusCode: 200,
-        headers,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        },
         body: JSON.stringify({ isPlaying: false })
       };
     }
@@ -38,7 +38,10 @@ exports.handler = async function(event, context) {
     
     return {
       statusCode: 200,
-      headers,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
       body: JSON.stringify({
         isPlaying: true,
         track: data.item.name,
@@ -49,7 +52,10 @@ exports.handler = async function(event, context) {
     console.log('Error:', error);
     return {
       statusCode: 500,
-      headers,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
       body: JSON.stringify({ error: 'Failed fetching data' })
     };
   }
