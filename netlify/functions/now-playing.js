@@ -29,8 +29,8 @@ exports.handler = async function(event, context) {
       }
     });
 
-    // If no track is playing, return simple message
-    if (response.status === 204) {
+    // If no track is playing or response is empty
+    if (response.status === 204 || response.status === 404) {
       return {
         statusCode: 200,
         headers: { 'Access-Control-Allow-Origin': '*' },
@@ -40,22 +40,37 @@ exports.handler = async function(event, context) {
 
     const data = await response.json();
     
+    // Check if we have valid data
+    if (!data || !data.item) {
+      return {
+        statusCode: 200,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ isPlaying: false })
+      };
+    }
+
+    // Log the response for debugging
+    console.log('Spotify response:', JSON.stringify(data, null, 2));
+    
     return {
       statusCode: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({
-        isPlaying: true,
-        title: data.item.name,
-        artist: data.item.artists.map(artist => artist.name).join(', ')
+        isPlaying: data.is_playing,
+        title: data.item?.name || 'Unknown Track',
+        artist: data.item?.artists?.map(artist => artist.name).join(', ') || 'Unknown Artist'
       })
     };
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Detailed error:', error);
     return {
       statusCode: 500,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: 'Failed to fetch now playing' })
+      body: JSON.stringify({ 
+        error: 'Failed to fetch now playing',
+        details: error.message 
+      })
     };
   }
 };
